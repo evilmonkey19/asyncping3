@@ -23,7 +23,7 @@ setuptools.setup(
     keywords='python3 ping icmp socket tool',
     packages=["ping3"],
     python_requires='>=3',
-    install_requires=[],
+    install_requires=["anyio >= 3"],
     extras_require={
         'dev': ['build', 'twine', 'pycodestyle'],
     },
