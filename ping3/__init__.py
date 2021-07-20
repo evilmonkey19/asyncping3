@@ -11,6 +11,7 @@ import threading
 import logging
 import functools
 import errno
+import anyio
 
 from . import errors
 from .enums import ICMP_DEFAULT_CODE, IcmpType, IcmpTimeExceededCode, IcmpDestinationUnreachableCode
@@ -87,6 +88,28 @@ def _func_logger(func: callable) -> callable:
     return wrapper
 
 
+def _async_func_logger(func: callable) -> callable:
+    """Decorator that log function calls for debug
+
+    Args:
+        func: Function to be decorated.
+
+    Returns:
+        Decorated function.
+    """
+    @functools.wraps(func)
+    async def wrapper(*args, **kwargs):
+        pargs = ", ".join("'{}'".format(arg) if isinstance(arg, str) else arg for arg in args)
+        kargs = str(kwargs) if kwargs else ""
+        all_args = ", ".join((pargs, kargs)) if (pargs and kargs) else (pargs or kargs)
+        _debug("Function Called:", "{func.__name__}({})".format(all_args, func=func))
+        func_return = await func(*args, **kwargs)
+        _debug("Function Returned:", "{func.__name__} -> {rtrn}".format(func=func, rtrn=func_return))
+        return func_return
+
+    return wrapper
+
+
 def checksum(source: bytes) -> int:
     """Calculates the checksum of the input bytes.
 
@@ -139,8 +162,8 @@ def read_ip_header(raw: bytes) -> dict:
     return ip_header
 
 
-@_func_logger
-def send_one_ping(sock: socket, dest_addr: str, icmp_id: int, seq: int, size: int):
+@_async_func_logger
+async def send_one_ping(sock: socket, dest_addr: str, icmp_id: int, seq: int, size: int):
     """Sends one ping to the given destination.
 
     ICMP Header (bits): type (8), code (8), checksum (16), id (16), sequence (16)
@@ -159,7 +182,7 @@ def send_one_ping(sock: socket, dest_addr: str, icmp_id: int, seq: int, size: in
     """
     _debug("Destination Address: '{}'".format(dest_addr))
     try:
-        dest_addr = socket.gethostbyname(dest_addr)  # Domain name will translated into IP address, and IP address leaves unchanged.
+        dest_addr = (await anyio.getaddrinfo(dest_addr, 0, family=socket.AF_INET))[0][4][0]
     except socket.gaierror as err:
         raise errors.HostUnknown(dest_addr) from err
     _debug("Destination Address:", dest_addr)
@@ -173,11 +196,12 @@ def send_one_ping(sock: socket, dest_addr: str, icmp_id: int, seq: int, size: in
     _debug("Sent ICMP Header:", read_icmp_header(icmp_header))
     _debug("Sent ICMP Payload:", icmp_payload)
     packet = icmp_header + icmp_payload
+    await anyio.wait_socket_writable(sock)
     sock.sendto(packet, (dest_addr, 0))  # addr = (ip, port). Port is 0 respectively the OS default behavior will be used.
 
 
-@_func_logger
-def receive_one_ping(sock: socket, icmp_id: int, seq: int, timeout: int) -> float:
+@_async_func_logger
+async def receive_one_ping(sock: socket, icmp_id: int, seq: int, timeout: int) -> float:
     """Receives the ping from the socket.
 
     IP Header (bits): version (8), type of service (8), length (16), id (16), flags (16), time to live (8), protocol (8), checksum (16), source ip (32), destination ip (32).
@@ -209,48 +233,45 @@ def receive_one_ping(sock: socket, icmp_id: int, seq: int, timeout: int) -> floa
         icmp_header_slice = slice(0, struct.calcsize(ICMP_HEADER_FORMAT))  # [0:8]
     timeout_time = time.time() + timeout  # Exactly time when timeout.
     _debug("Timeout time:", time.ctime(timeout_time))
-    while True:
-        timeout_left = timeout_time - time.time()  # How many seconds left until timeout.
-        timeout_left = timeout_left if timeout_left > 0 else 0  # Timeout must be non-negative
-        _debug("Timeout left: {:.2f}s".format(timeout_left))
-        selected = select.select([sock, ], [], [], timeout_left)  # Wait until sock is ready to read or time is out.
-        if selected[0] == []:  # Timeout
-            raise errors.Timeout(timeout)
-        time_recv = time.time()
-        recv_data, addr = sock.recvfrom(1024)
-        if has_ip_header:
-            ip_header_raw = recv_data[ip_header_slice]
-            ip_header = read_ip_header(ip_header_raw)
-            _debug("Received IP Header:", ip_header)
-        icmp_header_raw, icmp_payload_raw = recv_data[icmp_header_slice], recv_data[icmp_header_slice.stop:]
-        icmp_header = read_icmp_header(icmp_header_raw)
-        _debug("Received ICMP Header:", icmp_header)
-        _debug("Received ICMP Payload:", icmp_payload_raw)
-        if not has_ip_header:  #  When unprivileged on Linux, ICMP ID is rewrited by kernel.
-            icmp_id = sock.getsockname()[1]  # According to https://stackoverflow.com/a/14023878/4528364
-        if icmp_header['id'] and icmp_header['id'] != icmp_id:  # ECHO_REPLY should match the ID field.
-            _debug("ICMP ID dismatch. Packet filtered out.")
-            continue
-        if icmp_header['type'] == IcmpType.TIME_EXCEEDED:  # TIME_EXCEEDED has no icmp_id and icmp_seq. Usually they are 0.
-            if icmp_header['code'] == IcmpTimeExceededCode.TTL_EXPIRED:
-                raise errors.TimeToLiveExpired()  # Some router does not report TTL expired and then timeout shows.
-            raise errors.TimeExceeded()
-        if icmp_header['type'] == IcmpType.DESTINATION_UNREACHABLE:  # DESTINATION_UNREACHABLE has no icmp_id and icmp_seq. Usually they are 0.
-            if icmp_header['code'] == IcmpDestinationUnreachableCode.DESTINATION_HOST_UNREACHABLE:
-                raise errors.DestinationHostUnreachable()
-            raise errors.DestinationUnreachable()
-        if icmp_header['id'] and icmp_header['seq'] == seq:  # ECHO_REPLY should match the SEQ field.
-            if icmp_header['type'] == IcmpType.ECHO_REQUEST:  # filters out the ECHO_REQUEST itself.
-                _debug("ECHO_REQUEST received. Packet filtered out.")
+    with anyio.fail_after(timeout):
+        while True:
+            await anyio.wait_socket_readable(sock)
+            time_recv = time.time()
+            recv_data, addr = sock.recvfrom(1024)
+            if has_ip_header:
+                ip_header_raw = recv_data[ip_header_slice]
+                ip_header = read_ip_header(ip_header_raw)
+                _debug("Received IP Header:", ip_header)
+            icmp_header_raw, icmp_payload_raw = recv_data[icmp_header_slice], recv_data[icmp_header_slice.stop:]
+            icmp_header = read_icmp_header(icmp_header_raw)
+            _debug("Received ICMP Header:", icmp_header)
+            _debug("Received ICMP Payload:", icmp_payload_raw)
+            if not has_ip_header:  #  When unprivileged on Linux, ICMP ID is rewrited by kernel.
+                icmp_id = sock.getsockname()[1]  # According to https://stackoverflow.com/a/14023878/4528364
+            if icmp_header['id'] and icmp_header['id'] != icmp_id:  # ECHO_REPLY should match the ID field.
+                _debug("ICMP ID dismatch. Packet filtered out.")
                 continue
-            if icmp_header['type'] == IcmpType.ECHO_REPLY:
-                time_sent = struct.unpack(ICMP_TIME_FORMAT, icmp_payload_raw[0:struct.calcsize(ICMP_TIME_FORMAT)])[0]
-                return time_recv - time_sent
-        _debug("Uncatched ICMP Packet:", icmp_header)
+            if icmp_header['type'] == IcmpType.TIME_EXCEEDED:  # TIME_EXCEEDED has no icmp_id and icmp_seq. Usually they are 0.
+                if icmp_header['code'] == IcmpTimeExceededCode.TTL_EXPIRED:
+                    raise errors.TimeToLiveExpired()  # Some router does not report TTL expired and then timeout shows.
+                raise errors.TimeExceeded()
+            if icmp_header['type'] == IcmpType.DESTINATION_UNREACHABLE:  # DESTINATION_UNREACHABLE has no icmp_id and icmp_seq. Usually they are 0.
+                if icmp_header['code'] == IcmpDestinationUnreachableCode.DESTINATION_HOST_UNREACHABLE:
+                    raise errors.DestinationHostUnreachable()
+                raise errors.DestinationUnreachable()
+            if icmp_header['id'] and icmp_header['seq'] == seq:  # ECHO_REPLY should match the SEQ field.
+                if icmp_header['type'] == IcmpType.ECHO_REQUEST:  # filters out the ECHO_REQUEST itself.
+                    _debug("ECHO_REQUEST received. Packet filtered out.")
+                    continue
+                if icmp_header['type'] == IcmpType.ECHO_REPLY:
+                    time_sent = struct.unpack(ICMP_TIME_FORMAT, icmp_payload_raw[0:struct.calcsize(ICMP_TIME_FORMAT)])[0]
+                    return time_recv - time_sent
+            _debug("Uncatched ICMP Packet:", icmp_header)
 
+_seq_id = 0
 
-@_func_logger
-def ping(dest_addr: str, timeout: int = 4, unit: str = "s", src_addr: str = None, ttl: int = None, seq: int = 0, size: int = 56, interface: str = None) -> float:
+@_async_func_logger
+async def ping(dest_addr: str, timeout: int = 4, unit: str = "s", src_addr: str = None, ttl: int = None, seq: int = 0, size: int = 56, interface: str = None) -> float:
     """
     Send one ping to destination address with the given timeout.
 
@@ -270,6 +291,8 @@ def ping(dest_addr: str, timeout: int = 4, unit: str = "s", src_addr: str = None
     Raises:
         PingError: Any PingError will raise again if `ping3.EXCEPTIONS` is True.
     """
+    global _seq_id
+
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_ICMP)
     except PermissionError as err:
@@ -298,10 +321,14 @@ def ping(dest_addr: str, timeout: int = 4, unit: str = "s", src_addr: str = None
             _debug("Socket Source Address Binded:", src_addr)
         thread_id = threading.get_native_id() if hasattr(threading, 'get_native_id') else threading.currentThread().ident  # threading.get_native_id() is supported >= python3.8.
         process_id = os.getpid()  # If ping() run under different process, thread_id may be identical.
-        icmp_id = zlib.crc32("{}{}".format(process_id, thread_id).encode()) & 0xffff  # to avoid icmp_id collision.
+        icmp_id = (((process_id << 5) | _seq_id) ^ (process_id >> 11)) & 0xffff  # to avoid icmp_id collision.
+        _seq_id += 1
         try:
-            send_one_ping(sock=sock, dest_addr=dest_addr, icmp_id=icmp_id, seq=seq, size=size)
-            delay = receive_one_ping(sock=sock, icmp_id=icmp_id, seq=seq, timeout=timeout)  # in seconds
+            await send_one_ping(sock=sock, dest_addr=dest_addr, icmp_id=icmp_id, seq=seq, size=size)
+            try:
+                delay = await receive_one_ping(sock=sock, icmp_id=icmp_id, seq=seq, timeout=timeout)  # in seconds
+            except TimeoutError:
+                raise errors.Timeout(timeout=timeout) from None
         except errors.HostUnknown as err:  # Unsolved
             _debug(err)
             _raise(err)
@@ -317,8 +344,8 @@ def ping(dest_addr: str, timeout: int = 4, unit: str = "s", src_addr: str = None
         return delay
 
 
-@_func_logger
-def verbose_ping(dest_addr: str, count: int = 4, interval: float = 0, *args, **kwargs):
+@_async_func_logger
+async def verbose_ping(dest_addr: str, count: int = 4, interval: float = 0, *args, **kwargs):
     """
     Send pings to destination address with the given timeout and display the result.
 
@@ -337,11 +364,11 @@ def verbose_ping(dest_addr: str, count: int = 4, interval: float = 0, *args, **k
     i = 0
     while i < count or count == 0:
         if interval > 0 and i > 0:
-            time.sleep(interval)
+            await anyio.sleep(interval)
         output_text = "ping '{}'".format(dest_addr)
         output_text += " from '{}'".format(src) if src else ""
         output_text += " ... "
-        delay = ping(dest_addr, seq=i, *args, **kwargs)
+        delay = await ping(dest_addr, seq=i, *args, **kwargs)
         print(output_text, end="")
         if delay is None:
             print("Timeout > {}s".format(timeout) if timeout else "Timeout")

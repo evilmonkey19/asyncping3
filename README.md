@@ -20,10 +20,10 @@ pip install ping3  # install ping
 
 ```python
 >>> from ping3 import ping, verbose_ping
->>> ping('example.com')  # Returns delay in seconds.
+>>> anyio.run(ping,'example.com')  # Returns delay in seconds.
 0.215697261510079666
 
->>> verbose_ping('example.com')  # Ping 4 times in a row.
+>>> anyio.run(verbose_ping,'example.com')  # Ping 4 times in a row.
 ping 'example.com' ... 215ms
 ping 'example.com' ... 216ms
 ping 'example.com' ... 219ms

@@ -1,9 +1,11 @@
 import argparse
+import functools
+
+import anyio
 
 import ping3
 
-
-def main(assigned_args: list = None):
+async def main(assigned_args: list = None):
     """
     Parse and execute the call from command-line.
 
@@ -28,8 +30,9 @@ def main(assigned_args: list = None):
     ping3.DEBUG = args.debug
     ping3.EXCEPTIONS = args.exceptions
 
-    for addr in args.dest_addr:
-        ping3.verbose_ping(addr, count=args.count, ttl=args.ttl, timeout=args.timeout, size=args.size, interval=args.interval, interface=args.interface)
+    async with anyio.create_task_group() as tg:
+        for addr in args.dest_addr:
+            tg.start_soon(functools.partial(ping3.verbose_ping, addr, count=args.count, ttl=args.ttl, timeout=args.timeout, size=args.size, interval=args.interval, interface=args.interface))
 
 if __name__ == "__main__":
-    main()
+    anyio.run(main, backend="trio")
