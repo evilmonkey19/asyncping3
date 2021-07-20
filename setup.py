@@ -11,8 +11,8 @@ setuptools.setup(
     long_description=long_desc,
     long_description_content_type='text/markdown',
     url='https://github.com/M-o-a-T/asyncping',
-    author='Kai Yan',
-    author_email='kai@kyan001.com',
+    author='Matthias Urlichs',
+    author_email='matthias@urlichs.de',
     license='MIT',
     classifiers=[
         'Development Status :: 5 - Production/Stable',
