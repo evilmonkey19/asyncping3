@@ -5,7 +5,7 @@ import anyio
 
 import asyncping
 
-async def main(assigned_args: list = None):
+def main(assigned_args: list = None):
     """
     Parse and execute the call from command-line.
 
@@ -29,10 +29,14 @@ async def main(assigned_args: list = None):
     args = parser.parse_args(assigned_args)
     asyncping.DEBUG = args.debug
     asyncping.EXCEPTIONS = args.exceptions
+    proc = functools.partial(asyncping.verbose_ping, count=args.count, ttl=args.ttl, timeout=args.timeout, size=args.size, interval=args.interval, interface=args.interface)
 
-    async with anyio.create_task_group() as tg:
-        for addr in args.dest_addr:
-            tg.start_soon(functools.partial(asyncping.verbose_ping, addr, count=args.count, ttl=args.ttl, timeout=args.timeout, size=args.size, interval=args.interval, interface=args.interface))
+    async def _main():
+        async with anyio.create_task_group() as tg:
+            for addr in args.dest_addr:
+                tg.start_soon(proc, addr)
+
+    anyio.run(_main, backend="trio")
 
 if __name__ == "__main__":
-    anyio.run(main, backend="trio")
+    main()
