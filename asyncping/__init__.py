@@ -12,11 +12,11 @@ import logging
 import functools
 import errno
 import anyio
+import pkg_resources
 
 from . import errors
 from .enums import ICMP_DEFAULT_CODE, IcmpType, IcmpTimeExceededCode, IcmpDestinationUnreachableCode
 
-__version__ = "2.9.1"
 DEBUG = False  # DEBUG: Show debug info for developers. (default False)
 EXCEPTIONS = False  # EXCEPTIONS: Raise exception when delay is not available.
 LOGGER = None  # LOGGER: Record logs into console or file.
@@ -41,7 +41,8 @@ def _debug(*args, **kwargs):
         cout_handler.setLevel(logging.DEBUG)
         cout_handler.setFormatter(formatter)
         logger.addHandler(cout_handler)
-        logger.debug("AsyncPing Version: {}".format(__version__))
+        v,_ = pkg_resources.get_distribution("asyncping").version
+        logger.debug("AsyncPing Version: {}".format(v)
         logger.debug("LOGGER: {}".format(logger))
         return logger
 
