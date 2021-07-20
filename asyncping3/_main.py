@@ -3,7 +3,7 @@ import functools
 
 import anyio
 
-import asyncping
+import asyncping3
 
 def main(assigned_args: list = None):
     """
@@ -16,7 +16,7 @@ def main(assigned_args: list = None):
         Formatted ping results printed.
     """
     parser = argparse.ArgumentParser(prog="pping", description="A pure python3 version of ICMP ping implementation using raw socket.", epilog="!!Note: ICMP messages can only be sent from processes running as root.")
-    parser.add_argument("-v", "--version", action="version", version=asyncping.__version__)
+    parser.add_argument("-v", "--version", action="version", version=asyncping3.__version__)
     parser.add_argument(dest="dest_addr", metavar="DEST_ADDR", nargs="*", default=("example.com", "8.8.8.8"), help="The destination address, can be an IP address or a domain name. Ex. 192.168.1.1/example.com.")
     parser.add_argument("-c", "--count", dest="count", metavar="COUNT", type=int, default=4, help="How many pings should be sent. Default is 4.")
     parser.add_argument("-w", "--wait", dest="timeout", metavar="TIMEOUT", type=float, default=4, help="Time to wait for a response, in seconds. Default is 4.")
@@ -27,9 +27,9 @@ def main(assigned_args: list = None):
     parser.add_argument("--debug", action="store_true", dest="debug", help="Turn on DEBUG mode.")
     parser.add_argument("--exceptions", action="store_true", dest="exceptions", help="Turn on EXCEPTIONS mode.")
     args = parser.parse_args(assigned_args)
-    asyncping.DEBUG = args.debug
-    asyncping.EXCEPTIONS = args.exceptions
-    proc = functools.partial(asyncping.verbose_ping, count=args.count, ttl=args.ttl, timeout=args.timeout, size=args.size, interval=args.interval, interface=args.interface)
+    asyncping3.DEBUG = args.debug
+    asyncping3.EXCEPTIONS = args.exceptions
+    proc = functools.partial(asyncping3.verbose_ping, count=args.count, ttl=args.ttl, timeout=args.timeout, size=args.size, interval=args.interval, interface=args.interface)
 
     async def _main():
         async with anyio.create_task_group() as tg:

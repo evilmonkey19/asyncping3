@@ -1,6 +1,6 @@
 #!/usr/bin/make -f
 
-PACKAGE=asyncping
+PACKAGE=asyncping3
 ifneq ($(wildcard /usr/share/sourcemgr/make/py),)
 include /usr/share/sourcemgr/make/py
 # availabe via http://github.com/smurfix/sourcemgr
