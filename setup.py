@@ -4,11 +4,11 @@ with open('README.md') as f:
     long_desc = f.read()
 
 setuptools.setup(
-    name='ping3',
+    name='asyncping',
     description='A pure python3 version of ICMP ping implementation using raw socket.',
     long_description=long_desc,
     long_description_content_type='text/markdown',
-    url='https://github.com/kyan001/ping3',
+    url='https://github.com/M-o-a-T/asyncping',
     author='Kai Yan',
     author_email='kai@kyan001.com',
     license='MIT',
@@ -21,7 +21,7 @@ setuptools.setup(
         'Programming Language :: Python :: 3',
     ],
     keywords='python3 ping icmp socket tool',
-    packages=["ping3"],
+    packages=["asyncping"],
     python_requires='>=3',
     install_requires=["anyio >= 3"],
     extras_require={
@@ -30,6 +30,6 @@ setuptools.setup(
     package_data={},
     data_files=[],
     entry_points={
-        'console_scripts': ['ping3=ping3._main:main'],
+        'console_scripts': ['pping=asyncping._main:main'],
     },
 )

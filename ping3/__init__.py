@@ -28,7 +28,7 @@ SOCKET_SO_BINDTODEVICE = 25  # socket.SO_BINDTODEVICE
 
 
 def _debug(*args, **kwargs):
-    """Print debug info to stdout if `ping3.DEBUG` is True.
+    """Print debug info to stdout if `asyncping.DEBUG` is True.
 
     Args:
         *args: Any. Usually are strings or objects that can be converted to str.
@@ -41,7 +41,7 @@ def _debug(*args, **kwargs):
         cout_handler.setLevel(logging.DEBUG)
         cout_handler.setFormatter(formatter)
         logger.addHandler(cout_handler)
-        logger.debug("Ping3 Version: {}".format(__version__))
+        logger.debug("AsyncPing Version: {}".format(__version__))
         logger.debug("LOGGER: {}".format(logger))
         return logger
 
@@ -54,13 +54,13 @@ def _debug(*args, **kwargs):
 
 
 def _raise(err):
-    """Raise exception if `ping3.EXCEPTIONS` is True.
+    """Raise exception if `asyncping.EXCEPTIONS` is True.
 
     Args:
         err: Exception.
 
     Raise:
-        Exception: Exception passed in args will be raised if `ping3.EXCEPTIONS` is True.
+        Exception: Exception passed in args will be raised if `asyncping.EXCEPTIONS` is True.
     """
     if EXCEPTIONS:
         raise err
@@ -289,7 +289,7 @@ async def ping(dest_addr: str, timeout: int = 4, unit: str = "s", src_addr: str 
         The delay in seconds/milliseconds or None on timeout.
 
     Raises:
-        PingError: Any PingError will raise again if `ping3.EXCEPTIONS` is True.
+        PingError: Any PingError will raise again if `asyncping.EXCEPTIONS` is True.
     """
     global _seq_id
 

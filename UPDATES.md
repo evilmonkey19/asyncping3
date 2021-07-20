@@ -1,4 +1,7 @@
 # UPDATES
+* 3.0.0:
+    * renamed to `asyncping`
+    * anyio-ized.
 * 2.9.2:
     * Converted to a proper package
 * 2.9.1:
