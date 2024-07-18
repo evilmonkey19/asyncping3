@@ -7,7 +7,7 @@ import socket
 from unittest.mock import patch
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from asyncping3 import _main as command_line  # noqa: linter (pycodestyle) should not lint this line.
+from asyncping3 import command_line  # noqa: linter (pycodestyle) should not lint this line.
 from asyncping3 import errors  # noqa: linter (pycodestyle) should not lint this line.
 import asyncping3 as ping3
 

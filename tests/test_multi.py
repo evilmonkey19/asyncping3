@@ -6,7 +6,6 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import asyncping3 as ping3  # noqa: linter (pycodestyle) should not lint this line.
 
 
-# print("ping3=", ping3.__version__)
 # ping3.DEBUG = True
 HOSTS = ['baidu.com', 'example.com', '8.8.8.8', '1.1.1.1', '9.9.9.9', '127.0.0.1']
 

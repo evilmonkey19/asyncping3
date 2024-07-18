@@ -16,9 +16,6 @@ DEST_DOMAIN = 'example.com'
 class TestPing3:
     """ping3 unittest"""
 
-    def test_version(self):
-        self.assertIsInstance(ping3.__version__, str)
-
     @pytest.mark.anyio
     async def test_ping_normal(self):
         delay = await ping3.ping(DEST_DOMAIN)
