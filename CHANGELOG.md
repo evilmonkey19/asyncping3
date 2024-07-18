@@ -1,9 +1,42 @@
-# UPDATES
+# asyncping3
+* 3.1.0:
+    * Merged to current Upstream
 * 3.0.0:
     * renamed to `asyncping3`
     * anyio-ized.
+
+# Original Change Log
+* 4.0.8:
+    * Bug Fix: Command does not respect options with `-v/--version` and `-h/--help`. ( #80 )
+* 4.0.7:
+    * Bug Fix: Remove unsupported type hints in lower version of Python. ( #79 )
+* 4.0.6:
+    * Bug Fix: Type hint and comments refines. ( #78 )
+* 4.0.5:
+    * Bug Fix: Type hint refines. ( #78 )
+* 4.0.4:
+    * Improvement: Replace setup.py by pyproject.toml
+* 4.0.2:
+    * Bug Fix: Arg `src` in `verbose_ping` should be `src_addr`. ( #57 )
+* 4.0.1:
+    * Bug Fix: `message` should be the first argument in ping3.errors. ( #55 )
+* 4.0.0:
+    * Feature: Now errors `TimeToLiveExpired`, `DestinationUnreachable` and `DestinationHostUnreachable` have `ip_header` and `icmp_header` attached. ( #48 )
+* 3.0.1:
+    * Bug Fix: `verbose_ping` prints proper message on error.
+* 3.0.0:
+    * Backward Compatibility: Only Command-line options changed, now the options is more like `ping` on macOS and Linux.
+        * `-w`/`--wait` -> `-t`/`--timeout`.
+        * `-t`/`--ttl` -> `-T`/`--ttl`.
+        * `-l`/`--load` -> `-s`/`--size`.
+    * Improvement: 2 command-line options now have short forms.
+        * `-D` is added as the short form of `--debug`.
+        * `-E` is added as the short form of `--exceptions`.
+    * Feature: Use new command-line option `-S`/`--src` to set source address `src_addr`.
+* 2.9.3:
+    * Bug Fix: Set packet receive buffer size to 1500. ( #40 )
 * 2.9.2:
-    * Converted to a proper package
+    * Improvement: Converted to a proper package. ( #38 #39 )
 * 2.9.1:
     * Bug Fix: macOS is not treated as Linux now.
 * 2.9.0:

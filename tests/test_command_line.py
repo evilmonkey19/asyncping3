@@ -7,60 +7,64 @@ import socket
 from unittest.mock import patch
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from asyncping3 import _main as command_line_ping3  # noqa: linter (pycodestyle) should not lint this line.
+from asyncping3 import _main as command_line  # noqa: linter (pycodestyle) should not lint this line.
 from asyncping3 import errors  # noqa: linter (pycodestyle) should not lint this line.
 import asyncping3 as ping3
+
+DEST_DOMAIN = "example.com"
 
 class TestCmdLine:
     """command-line ping3 unittest"""
 
 #   def test_dest_addr_0(self):
 #       with patch("sys.stdout", new=io.StringIO()) as fake_out:
-#           command_line_ping3.main()
+#           command_line.main()
 #           self.assertRegex(fake_out.getvalue(), r".*[0-9]+ms.*")
 
     def test_dest_addr_1(self):
         with patch("sys.stdout", new=io.StringIO()) as fake_out:
-            command_line_ping3.main(["127.0.0.1"])
-            assert "127.0.0.1" in fake_out.getvalue()
+            command_line.main(["127.0.0.1"])
+            self.assertIn("127.0.0.1", fake_out.getvalue())
 
     def test_dest_addr_2(self):
         with patch("sys.stdout", new=io.StringIO()) as fake_out:
-            command_line_ping3.main(["127.0.0.1", "8.8.8.8"])
-            self.assertTrue("127.0.0.1" in fake_out.getvalue())
-            self.assertTrue("8.8.8.8" in fake_out.getvalue())
+            command_line.main(["127.0.0.1", "8.8.8.8"])
+            self.assertIn("127.0.0.1", fake_out.getvalue())
+            self.assertIn("8.8.8.8", fake_out.getvalue())
 
     def test_count(self):
         with patch("sys.stdout", new=io.StringIO()) as fake_out:
-            command_line_ping3.main(['-c', '1', 'example.com'])
+            command_line.main(["-c", "1", DEST_DOMAIN])
             self.assertEqual(fake_out.getvalue().count("\n"), 1)
 
     def test_timeout(self):
         with patch("sys.stdout", new=io.StringIO()) as fake_out:
-            command_line_ping3.main(['-w', '0.0001', 'example.com'])
+            command_line.main(["-t", "0.0001", DEST_DOMAIN])
             self.assertRegex(fake_out.getvalue(), r".*Timeout \> [0-9\.]+s.*")
 
+    @unittest.skipIf(sys.platform.startswith("win"), "Linux and macOS Only")
     def test_ttl(self):
         with patch("sys.stdout", new=io.StringIO()) as fake_out:
-            command_line_ping3.main(['-t', '1', 'example.com'])
-            self.assertRegex(fake_out.getvalue(), r".*Timeout.*")
+            command_line.main(["-T", "1", DEST_DOMAIN])
+            print(fake_out.getvalue(), file=sys.stderr)
+            self.assertRegex(fake_out.getvalue(), r".*Error.*")
 
     def test_size(self):
         with patch("sys.stdout", new=io.StringIO()) as fake_out:
-            command_line_ping3.main(['-l', '100', 'example.com'])
+            command_line.main(["-s", "100", DEST_DOMAIN])
             self.assertRegex(fake_out.getvalue(), r".*[0-9]+ms.*")
             with self.assertRaises(OSError):
-                command_line_ping3.main(['-l', '99999', 'example.com'])
+                command_line.main(["-s", "99999", DEST_DOMAIN])
 
     def test_interval(self):
         with patch("sys.stdout", new=io.StringIO()) as fake_out:
             start_time = time.time()
-            command_line_ping3.main(['-i', '1.7', 'example.com'])
+            command_line.main(["-i", "1", DEST_DOMAIN])
             end_time = time.time()
-            self.assertTrue((end_time - start_time) >= 5.1)  # time_expect = (count - 1) * interval
-            self.assertFalse('Timeout' in fake_out.getvalue())
+            self.assertTrue((end_time - start_time) >= 3)  # time_expect = (count - 1) * interval
+            self.assertNotIn("Timeout", fake_out.getvalue())
 
-    @unittest.skipUnless(sys.platform == 'linux', "Linux only")
+    @unittest.skipUnless(sys.platform == "linux", "Linux only")
     def test_interface(self):
         with patch("sys.stdout", new=io.StringIO()) as fake_out:
             try:
@@ -72,19 +76,28 @@ class TestCmdLine:
             try:
                 socket.if_nametoindex(my_interface)  # test if the interface exists.
             except OSError:
-                self.fail('Interface Name Error: {}'.format(my_interface))
-            command_line_ping3.main(['-I', my_interface, 'example.com'])
+                self.fail("Interface Name Error: {}".format(my_interface))
+            command_line.main(["-I", my_interface, DEST_DOMAIN])
+            self.assertRegex(fake_out.getvalue(), r".*[0-9]+ms.*")
+
+    def test_src_addr(self):
+        with patch("sys.stdout", new=io.StringIO()) as fake_out:
+            my_ip = socket.gethostbyname(socket.gethostname())
+            if my_ip in ("127.0.0.1", "127.0.1.1"):  # This may caused by /etc/hosts settings.
+                dest_addr = my_ip  # only localhost can send and receive from 127.0.0.1 (or 127.0.1.1 on Ubuntu).
+            else:
+                dest_addr = DEST_DOMAIN
+            command_line.main(["-S", my_ip, dest_addr])
             self.assertRegex(fake_out.getvalue(), r".*[0-9]+ms.*")
 
     def test_debug(self):
         with patch("sys.stdout", new=io.StringIO()), patch("sys.stderr", new=io.StringIO()) as fake_err:
-            command_line_ping3.main(['--debug', '-c', '1', 'example.com'])
+            command_line.main(["--debug", "-c", "1", DEST_DOMAIN])
             self.assertIn("[DEBUG]", fake_err.getvalue())
 
     def test_exceptions(self):
-        with patch("sys.stdout", new=io.StringIO()) as fake_out:
-            with self.assertRaises(errors.Timeout):
-                command_line_ping3.main(['--exceptions', '-w', '0.0001', 'example.com'])
+        with self.assertRaises(errors.Timeout):
+            command_line.main(["--exceptions", "-t", "0.0001", DEST_DOMAIN])
 
 
 if __name__ == "__main__":
