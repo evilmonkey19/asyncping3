@@ -3,11 +3,11 @@ requires = ["setuptools>=61.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "ping3"
-description = "A pure python3 version of ICMP ping implementation using raw socket."
-requires-python = ">=3.5"
+name = "asyncping3"
+description = "An async-friendly pure python3 version of ICMP ping implementation using raw socket."
+requires-python = ">=3.9"
 readme = "README.md"
-keywords = ["python3", "ping", "icmp", "socket", "tool"]
+keywords = ["python3", "anyio", "ping", "icmp", "socket", "tool"]
 license = {file = "LICENSE"}
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -22,26 +22,26 @@ dependencies = []
 dynamic = ["version"]
 
 [[project.authors]]
-name = "Kyan"
-email = "kai@kyan001.com"
+name = "Matthias Urlichs"
+email = "matthias@urlichs.de"
 
 [project.optional-dependencies]
 dev = ["build", "twine"]
 
 [project.urls]
-Homepage = "https://github.com/kyan001/ping3"
-Changelog = "https://github.com/kyan001/ping3/blob/master/CHANGELOG.md"
-"Issue Tracker" = "https://github.com/kyan001/ping3/issues"
-"Source Code" = "https://github.com/kyan001/ping3"
+Homepage = "https://github.com/M-o-a-T/asyncping3"
+Changelog = "https://github.com/M-o-a-T/asyncping3/blob/master/CHANGELOG.md"
+"Issue Tracker" = "https://github.com/M-o-a-T/asyncping3/issues"
+"Source Code" = "https://github.com/M-o-a-T/asyncping3"
 
 [project.scripts]
-ping3 = "ping3.command_line:main"
+ping3 = "asyncping3.command_line:main"
 
 [tool.setuptools]
-py-modules = ["ping3"]
+py-modules = ["asyncping3"]
 
 [tool.setuptools.dynamic]
-version = {attr = "ping3.__version__"}
+version = {attr = "asyncping3.__version__"}
 
 [tool.setuptools.packages.find]
 exclude = ["contrib", "docs", "tests"]
