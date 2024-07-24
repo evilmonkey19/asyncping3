@@ -1,6 +1,6 @@
 # AsyncPing
-![GitHub release](https://img.shields.io/github/release/M-o-a-T/asyncping.svg)
-[![GitHub license](https://img.shields.io/github/license/M-o-a-T/asyncping.svg)](https://github.com/M-o-a-T/asyncping/blob/master/LICENSE)
+![GitHub release](https://img.shields.io/github/release/M-o-a-T/asyncping3.svg)
+[![GitHub license](https://img.shields.io/github/license/M-o-a-T/asyncping3.svg)](https://github.com/M-o-a-T/asyncping3/blob/master/LICENSE)
 ![PyPI - Downloads](https://img.shields.io/pypi/dm/asyncping3.svg)
 
 AsyncPing is an async-friendly pure python3 version of ICMP ping implementation using raw sockets.\
@@ -8,7 +8,7 @@ AsyncPing is an async-friendly pure python3 version of ICMP ping implementation 
 
 > The Python2 version originally from [here](http://github.com/samuel/python-ping).\
 > The Python3 version originally from [here](http://github.com/kyan001/ping3).\
-> This version maintained at [this github repo](https://github.com/M-o-a-T/asyncping).
+> This fork maintained at [this github repo](https://github.com/M-o-a-T/asyncping3).
 
 [CHANGELOG](CHANGELOG.md)
 
